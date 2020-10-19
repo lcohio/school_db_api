@@ -76,7 +76,7 @@ router.post('/users', asyncHandler(async (req, res, next) => {
     }
     await User.create(user);
     res.status(201).set({
-      location: `http://localhost:${process.env.PORT || 5000}/`
+      location: "/"
     }).end();
   } catch (error) {
     if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {

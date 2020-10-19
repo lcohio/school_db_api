@@ -57,7 +57,12 @@ router.get('/courses', asyncHandler(async (req, res) => {
     attributes: {
       exclude: ["createdAt", "updatedAt"]
     },
-    include: User
+    include: {
+      model: User,
+      attributes: {
+        exclude: ["password", "createdAt", "updatedAt"]
+      }
+    }
   });
   res.status(200).json(courses);
 }));
@@ -71,7 +76,12 @@ router.get('/courses/:id', asyncHandler(async (req, res) => {
     attributes: {
       exclude: ["createdAt", "updatedAt"]
     },
-    include: User
+    include: {
+      model: User,
+      attributes: {
+        exclude: ["password", "createdAt", "updatedAt"]
+      }
+    }
   });
   res.status(200).json(course);
 }));
@@ -87,7 +97,7 @@ router.post('/courses', authenticateUser, asyncHandler(async (req, res, next) =>
     });
     const id = course.id;
     res.status(201).set({
-      Location: `http://localhost:${process.env.PORT || 5000}/api/courses/${id}`
+      location: `/api/courses/${id}`
     }).end();
   } catch (error) {
     if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
@@ -105,20 +115,19 @@ router.put('/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
     const courseData = req.body;
     const course = await Course.findByPk(req.params.id);
     if(course.userId !== req.user.id) {
-      res.status(401).json({
+      res.status(403).json({
         error: "You cannot change someone else's course."
+      })
+    } else if (!req.body.title || !req.body.description) {
+      res.status(400).json({
+        error: "Title and description are required fields."
       })
     } else {
       await course.update(courseData);
       res.status(204).end();
     }
   } catch (error) {
-    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
-      const errors = error.errors.map(err => err.message);
-      res.status(400).json({ errors });
-    } else {
-      throw error;
-    }
+    next(error);
   }
 }));
 
@@ -132,7 +141,7 @@ router.delete('/courses/:id', authenticateUser, asyncHandler(async (req, res, ne
       });
     } else {
       await course.destroy();
-      res.status(200).end();
+      res.status(204).end();
     }
   } catch (error){
     next(error);
