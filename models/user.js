@@ -43,6 +43,17 @@ module.exports = (sequelize) => {
         },
         isEmail: {
           msg: "Valid email is required!"
+        },
+        isUnique(val) {
+          return User.findOne({
+            where: {
+              emailAddress: val
+            }
+          }).then(emailAddress => {
+            if (emailAddress) {
+              throw new Error("That email address is already on file for another user.")
+            }
+          })
         }
       }
     },

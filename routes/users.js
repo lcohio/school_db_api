@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('basic-auth');
-const { User } = require('../models');
+const { User, Course } = require('../models');
 const bcryptjs = require('bcryptjs');
 
 // Authenticator middleware
@@ -69,28 +69,21 @@ router.get('/users', authenticateUser, asyncHandler(async (req, res) => {
 router.post('/users', asyncHandler(async (req, res, next) => {
   try {
     const user = req.body;
-    user.password = bcryptjs.hashSync(req.body.password);
-    const emailExists = await User.findOne({
-      where: {
-        emailAddress: user.emailAddress
+    for (const key in user) {
+      if (key === "password" && user[key].length !== 0) {
+        user[key] = bcryptjs.hashSync(user[key]);
       }
-    });
-    if(emailExists) {
-      res.status(400).json({
-        error: "Email address is taken"
-      });
-    } else {
-      await User.create(user);
-      res.status(201).set({
-        Location: `http://localhost:${process.env.PORT || 5000}/`
-      }).end();
     }
-  } catch(error) {
-    if(error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+    await User.create(user);
+    res.status(201).set({
+      location: `http://localhost:${process.env.PORT || 5000}/`
+    }).end();
+  } catch (error) {
+    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
       const errors = error.errors.map(err => err.message);
       res.status(400).json({ errors });
     } else {
-      next(error);
+      throw error;
     }
   }
 }));

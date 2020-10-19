@@ -56,7 +56,8 @@ router.get('/courses', asyncHandler(async (req, res) => {
   const courses = await Course.findAll({
     attributes: {
       exclude: ["createdAt", "updatedAt"]
-    }
+    },
+    include: User
   });
   res.status(200).json(courses);
 }));
@@ -69,7 +70,8 @@ router.get('/courses/:id', asyncHandler(async (req, res) => {
     },
     attributes: {
       exclude: ["createdAt", "updatedAt"]
-    }
+    },
+    include: User
   });
   res.status(200).json(course);
 }));
@@ -102,21 +104,16 @@ router.put('/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
   try {
     const courseData = req.body;
     const course = await Course.findByPk(req.params.id);
-    if (course.userId === req.user.id) {
-      await course.update({
-        title: courseData.title,
-        description: courseData.description,
-        estimatedTime: courseData.estimatedTime,
-        materialsNeeded: courseData.materialsNeeded
-      });
-      res.status(204).end();
+    if(course.userId !== req.user.id) {
+      res.status(401).json({
+        error: "You cannot change someone else's course."
+      })
     } else {
-      res.status(403).json({
-        error: "You can't change someone else's course."
-      });
+      await course.update(courseData);
+      res.status(204).end();
     }
-  } catch(error) {
-    if(error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
+  } catch (error) {
+    if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeUniqueConstraintError') {
       const errors = error.errors.map(err => err.message);
       res.status(400).json({ errors });
     } else {
@@ -129,13 +126,13 @@ router.put('/courses/:id', authenticateUser, asyncHandler(async (req, res) => {
 router.delete('/courses/:id', authenticateUser, asyncHandler(async (req, res, next) => {
   try {
     const course = await Course.findByPk(req.params.id);
-    if (course.userId === req.user.id) {
-      await course.destroy();
-      res.status(200).end();
-    } else {
+    if (course.userId !== req.user.id) {
       res.status(403).json({
         error: "You can't delete someone else's course."
       });
+    } else {
+      await course.destroy();
+      res.status(200).end();
     }
   } catch (error){
     next(error);
